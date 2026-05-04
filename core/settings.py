@@ -1,4 +1,5 @@
 # core/settings.py
+
 from pathlib import Path
 from datetime import timedelta
 import os
@@ -15,18 +16,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ========================
 # SEGURANÇA
 # ========================
-SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-default-key-change-me")
+SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-default-key-for-dev-only-change-in-production-123456789")
 
-DEBUG = os.getenv("DEBUG", "False") == "True"
+DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1", "yes")
 
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
-
-# Sempre adicionar onrender.com em produção
-ALLOWED_HOSTS += [
-    'pedidos-backend-1.onrender.com',
-    'pedidos-backend-y2wn.onrender.com',
-    '.onrender.com',
-]
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+ALLOWED_HOSTS += ['.onrender.com', 'pedidos-backend-eljk.onrender.com', '*']
 
 # ========================
 # APPS
@@ -38,14 +33,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
-    # Third party
     'rest_framework',
     'rest_framework_simplejwt',
-    #'rest_framework.authtoken',
     'corsheaders',
-
-    # Local
     'accounts',
     'pedidos',
 ]
@@ -55,7 +45,7 @@ INSTALLED_APPS = [
 # ========================
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',  # DEVE vir depois de security
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -66,22 +56,12 @@ MIDDLEWARE = [
 ]
 
 # ========================
-# CORS
+# CORS - ACEITAR QUALQUER ORIGEM
 # ========================
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "https://pedidos-frontend-bay.vercel.app",
-    
-]
-
-# Permitir qualquer origem do Vercel
-CORS_ALLOWED_ORIGIN_REGEXES = [
-    r"^https://.*\.vercel\.app$",
-]
-
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOW_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
+CORS_ALLOW_HEADERS = ['*']
 
 # ========================
 # CSRF
@@ -93,11 +73,12 @@ CSRF_TRUSTED_ORIGINS = [
     "https://*.onrender.com",
 ]
 
-# ========================
-# URLS / TEMPLATES
-# ========================
 ROOT_URLCONF = 'core.urls'
+WSGI_APPLICATION = 'core.wsgi.application'
 
+# ========================
+# TEMPLATES
+# ========================
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -114,38 +95,20 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'core.wsgi.application'
+# ========================
+# DATABASE
+# ========================
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///db.sqlite3")
+DATABASES = {'default': dj_database_url.parse(DATABASE_URL)}
 
 # ========================
-# DATABASE - PostgreSQL do Render
-# ========================
-# URL do banco de dados (substitua pela sua)
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://admin:GB5O2oAdWGV0cZK3DvIrCWv3Jy5xyAfi@dpg-d7kuruvaqgkc73ccuhk0-a/secure_messaging_k977"
-)
-
-DATABASES = {
-    'default': dj_database_url.parse(DATABASE_URL)
-}
-
-# ========================
-# AUTH USER
+# AUTH
 # ========================
 AUTH_USER_MODEL = 'accounts.User'
+AUTH_PASSWORD_VALIDATORS = []
 
 # ========================
-# PASSWORD VALIDATION
-# ========================
-AUTH_PASSWORD_VALIDATORS = [
-    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', 'OPTIONS': {'min_length': 8}},
-    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
-]
-
-# ========================
-# INTERNATIONALIZATION
+# I18N
 # ========================
 LANGUAGE_CODE = 'pt-pt'
 TIME_ZONE = 'Africa/Maputo'
@@ -153,14 +116,11 @@ USE_I18N = True
 USE_TZ = True
 
 # ========================
-# STATIC / MEDIA
+# STATIC
 # ========================
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-
-# Usar WhiteNoise para servir arquivos estáticos
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
@@ -183,8 +143,8 @@ REST_FRAMEWORK = {
 # JWT
 # ========================
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=24),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
@@ -193,21 +153,12 @@ SIMPLE_JWT = {
 # ========================
 # EMAIL
 # ========================
-EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
-EMAIL_HOST = os.getenv("EMAIL_HOST", "")
-EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
-EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
-EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@escola.com")
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'noreply@escola.com'
 
 # ========================
-# SECURITY HEADERS (Render)
+# RENDER
 # ========================
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-
-# ========================
-# DEFAULT AUTO FIELD
-# ========================
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
