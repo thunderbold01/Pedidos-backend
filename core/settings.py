@@ -44,7 +44,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'corsheaders',
 
-    # Local
+    # Local apps
     'accounts',
     'pedidos',
 ]
@@ -55,7 +55,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
 
-    # WHITENOISE (IMPORTANTE PARA STATIC NO RENDER)
+    # WHITENOISE (OBRIGATÓRIO NO RENDER)
     'whitenoise.middleware.WhiteNoiseMiddleware',
 
     'corsheaders.middleware.CorsMiddleware',
@@ -84,7 +84,7 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
 CORS_ALLOW_CREDENTIALS = True
 
 # ========================
-# CSRF (IMPORTANTE PARA ADMIN + FRONTEND)
+# CSRF
 # ========================
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
@@ -93,9 +93,25 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 # ========================
-# URLS
+# URLS / TEMPLATES (FIX ADMIN ERROR E403)
 # ========================
 ROOT_URLCONF = 'core.urls'
+
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',  # 🔥 ESSENCIAL PARA ADMIN
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
@@ -110,12 +126,12 @@ DATABASES = {
 }
 
 # ========================
-# AUTH
+# AUTH USER
 # ========================
 AUTH_USER_MODEL = 'accounts.User'
 
 # ========================
-# PASSWORDS
+# PASSWORD VALIDATION
 # ========================
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
