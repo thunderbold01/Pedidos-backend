@@ -1,4 +1,4 @@
-cat > build.sh << 'EOF'
+
 #!/usr/bin/env bash
 set -o errexit
 
@@ -7,36 +7,30 @@ echo "  BUILD SISTEMA DE PEDIDOS"
 echo "========================================="
 
 echo ""
-echo "📦 Instalando pip mais recente..."
-pip install --upgrade pip
+echo "📦 Atualizando pip..."
+python -m pip install --upgrade pip
 
 echo ""
-echo "📦 Instalando dependencias..."
-pip install -r requirements.txt
+echo "📦 Instalando dependencias FORCADO..."
+python -m pip install --force-reinstall -r requirements.txt
 
 echo ""
-echo "📋 Verificando gunicorn..."
-which gunicorn
-gunicorn --version
+echo "📋 Verificando instalacao..."
+python -m pip list | grep -i gunicorn
+python -m pip list | grep -i django
 
 echo ""
-echo "🗄️  Criando migracoes..."
+echo "🗄️  Migracoes..."
 python manage.py makemigrations accounts pedidos --noinput
-
-echo ""
-echo "🗄️  Executando migracoes..."
 python manage.py migrate --noinput
 
 echo ""
-echo "📁 Coletando arquivos estaticos..."
+echo "📁 Estaticos..."
 python manage.py collectstatic --noinput --clear
 
 echo ""
-echo "👤 Criando super usuario..."
+echo "👤 Usuarios..."
 python create_superuser.py
 
 echo ""
-echo "========================================="
-echo "  ✅ BUILD CONCLUIDO!"
-echo "========================================="
-EOF
+echo "✅ BUILD CONCLUIDO!"
