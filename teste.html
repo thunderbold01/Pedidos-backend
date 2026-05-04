@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Pedidos & Saídas</title>
+  <style>
+    :root {
+      --branco: #ffffff;
+      --cinza: #808080;
+      --vermelho-escuro: #8b0000;
+      --azul-ciano: #00bcd4;
+      --gradiente-base: linear-gradient(135deg, var(--branco) 96%, #f4f4f4 2%, rgba(128,128,128,0.12) 1%, rgba(139,0,0,0.08) 0.5%, rgba(0,188,212,0.12) 0.5%);
+      --gradiente-destaque: linear-gradient(135deg, var(--vermelho-escuro), var(--azul-ciano));
+      --gradiente-status-pend: linear-gradient(135deg, rgba(139,0,0,0.15), rgba(128,128,128,0.1));
+      --gradiente-status-saida: linear-gradient(135deg, rgba(0,188,212,0.15), rgba(255,255,255,0.5));
+      --gradiente-status-ok: linear-gradient(135deg, rgba(128,128,128,0.15), rgba(255,255,255,0.5));
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    
+    body {
+      background: var(--gradiente-base);
+      color: #222;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    header {
+      text-align: center;
+      padding: 24px;
+      margin-bottom: 24px;
+      border-radius: 16px;
+      background: var(--gradiente-base);
+      border: 1px solid rgba(128,128,128,0.15);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    }
+    header h1 {
+      font-size: 1.8rem;
+      background: var(--gradiente-destaque);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      gap: 20px;
+    }
+
+    .card {
+      background: var(--gradiente-base);
+      padding: 20px;
+      border-radius: 14px;
+      border: 1px solid rgba(128,128,128,0.12);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+    }
+    .card h2 {
+      font-size: 1.2rem;
+      margin-bottom: 16px;
+      color: #333;
+      border-bottom: 2px solid rgba(0,188,212,0.2);
+      padding-bottom: 8px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 6px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid rgba(128,128,128,0.25);
+      border-radius: 8px;
+      background: linear-gradient(180deg, #ffffff 98%, #f9f9f9 100%);
+      font-size: 0.95rem;
+      transition: all 0.2s ease;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--azul-ciano);
+      box-shadow: 0 0 0 3px rgba(0,188,212,0.15);
+    }
+
+    button {
+      width: 100%;
+      padding: 11px;
+      border: none;
+      border-radius: 8px;
+      background: var(--gradiente-destaque);
+      color: #fff;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    button:hover { opacity: 0.92; }
+    button:active { transform: scale(0.98); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+    }
+    th, td {
+      padding: 12px 10px;
+      text-align: left;
+      border-bottom: 1px solid rgba(128,128,128,0.15);
+    }
+    th {
+      background: linear-gradient(135deg, rgba(128,128,128,0.06), rgba(0,188,212,0.06));
+      font-weight: 700;
+      color: #444;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    tr:hover td { background: rgba(255,255,255,0.4); }
+
+    .status {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+    .pendente { background: var(--gradiente-status-pend); color: var(--vermelho-escuro); }
+    .saida    { background: var(--gradiente-status-saida); color: var(--azul-ciano); }
+    .concluido{ background: var(--gradiente-status-ok); color: var(--cinza); }
+
+    .btn-acao {
+      width: auto;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      background: linear-gradient(135deg, rgba(139,0,0,0.15), rgba(0,188,212,0.15));
+      color: #333;
+      border: 1px solid rgba(0,188,212,0.3);
+    }
+    .btn-acao:hover { background: var(--gradiente-destaque); color: #fff; border-color: transparent; }
+    .btn-disabled {
+      width: auto;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      background: rgba(128,128,128,0.15);
+      color: #888;
+      cursor: default;
+      pointer-events: none;
+    }
+
+    @media (max-width: 700px) {
+      .form-grid { grid-template-columns: 1fr; }
+      table, thead, tbody, th, td, tr { display: block; }
+      tr { margin-bottom: 12px; border: 1px solid rgba(128,128,128,0.15); border-radius: 8px; padding: 10px; }
+      td { border-bottom: none; padding: 8px 0; display: flex; justify-content: space-between; align-items: center; }
+      td::before { content: attr(data-label); font-weight: 600; color: #555; margin-right: 8px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>📦 Sistema de Pedidos & Controle de Saída</h1>
+  </header>
+
+  <main class="container">
+    <!-- Formulário de Cadastro -->
+    <section class="card">
+      <h2>➕ Registrar Novo Pedido</h2>
+      <form onsubmit="event.preventDefault(); alert('Pedido simulado registrado!');">
+        <div class="form-grid">
+          <div>
+            <label for="cliente">Cliente</label>
+            <input type="text" id="cliente" placeholder="Nome ou Razão Social" required>
+          </div>
+          <div>
+            <label for="produto">Produto</label>
+            <input type="text" id="produto" placeholder="Item solicitado" required>
+          </div>
+          <div>
+            <label for="qtd">Quantidade</label>
+            <input type="number" id="qtd" min="1" value="1" required>
+          </div>
+          <div>
+            <label for="prioridade">Prioridade</label>
+            <select id="prioridade">
+              <option>Normal</option>
+              <option>Alta</option>
+              <option>Urgente</option>
+            </select>
+          </div>
+        </div>
+        <button type="submit">📥 Registrar Pedido</button>
+      </form>
+    </section>
+
+    <!-- Tabela de Controle -->
+    <section class="card">
+      <h2>📋 Pedidos & Controle de Saída</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Cliente</th>
+            <th>Produto</th>
+            <th>Qtd</th>
+            <th>Status</th>
+            <th>Ação</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="ID">#001</td>
+            <td data-label="Cliente">Empresa Alpha</td>
+            <td data-label="Produto">Monitor 24"</td>
+            <td data-label="Qtd">5</td>
+            <td data-label="Status"><span class="status pendente">Pendente</span></td>
+            <td data-label="Ação"><button class="btn-acao">Registrar Saída</button></td>
+          </tr>
+          <tr>
+            <td data-label="ID">#002</td>
+            <td data-label="Cliente">João Silva</td>
+            <td data-label="Produto">Teclado Mecânico</td>
+            <td data-label="Qtd">2</td>
+            <td data-label="Status"><span class="status saida">Em Saída</span></td>
+            <td data-label="Ação"><button class="btn-acao">Confirmar Entrega</button></td>
+          </tr>
+          <tr>
+            <td data-label="ID">#003</td>
+            <td data-label="Cliente">Tech Store</td>
+            <td data-label="Produto">Mouse Sem Fio</td>
+            <td data-label="Qtd">10</td>
+            <td data-label="Status"><span class="status concluido">Concluído</span></td>
+            <td data-label="Ação"><button class="btn-disabled">Finalizado</button></td>
+          </tr>
+          <tr>
+            <td data-label="ID">#004</td>
+            <td data-label="Cliente">Logística Express</td>
+            <td data-label="Produto">SSD 1TB</td>
+            <td data-label="Qtd">8</td>
+            <td data-label="Status"><span class="status pendente">Pendente</span></td>
+            <td data-label="Ação"><button class="btn-acao">Registrar Saída</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+</body>
+</html>

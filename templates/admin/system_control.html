@@ -1,0 +1,86 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block content %}
+<div style="padding: 20px;">
+    <h1>🎛️ Controle do Sistema</h1>
+    
+    <!-- Cards de Status -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 20px 0;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px;">
+            <h3>👥 Usuários</h3>
+            <div style="font-size: 36px;">{{ total_users }}</div>
+            <small>Ativos: {{ active_users }}</small>
+        </div>
+        
+        <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 20px; border-radius: 10px;">
+            <h3>📋 Pedidos</h3>
+            <div style="font-size: 36px;">{{ total_pedidos }}</div>
+            <small>Hoje: {{ today_pedidos }}</small>
+        </div>
+        
+        <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 20px; border-radius: 10px;">
+            <h3>⚠️ Erros</h3>
+            <div style="font-size: 36px;">{{ error_logs }}</div>
+            <small>Logs de erro</small>
+        </div>
+        
+        <div style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white; padding: 20px; border-radius: 10px;">
+            <h3>💻 CPU</h3>
+            <div style="font-size: 36px;">{{ cpu_usage }}%</div>
+            <small>Memória: {{ memory_usage }}%</small>
+        </div>
+    </div>
+    
+    <!-- Controles -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+        <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <h3>🔐 Controle de Acesso</h3>
+            
+            <form method="post" style="margin-bottom: 15px;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="toggle_login">
+                <button type="submit" style="width: 100%; padding: 10px; background: {% if config.login_enabled %}#4CAF50{% else %}#F44336{% endif %}; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    Login: {{ config.login_enabled|yesno:"ATIVADO,DESATIVADO" }}
+                </button>
+            </form>
+            
+            <form method="post" style="margin-bottom: 15px;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="toggle_register">
+                <button type="submit" style="width: 100%; padding: 10px; background: {% if config.registration_enabled %}#4CAF50{% else %}#F44336{% endif %}; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    Registro: {{ config.registration_enabled|yesno:"ATIVADO,DESATIVADO" }}
+                </button>
+            </form>
+            
+            <form method="post" style="margin-bottom: 15px;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="toggle_maintenance">
+                <button type="submit" style="width: 100%; padding: 10px; background: {% if config.maintenance_mode %}#F44336{% else %}#FF9800{% endif %}; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    Manutenção: {{ config.maintenance_mode|yesno:"ATIVADA,DESATIVADA" }}
+                </button>
+            </form>
+        </div>
+        
+        <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <h3>🚫 Bloqueios Rápidos</h3>
+            
+            <form method="post" style="margin-bottom: 15px;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="block_all_non_admin">
+                <button type="submit" style="width: 100%; padding: 10px; background: #F44336; color: white; border: none; border-radius: 5px; cursor: pointer;" onclick="return confirm('Bloquear login de TODOS exceto admins?')">
+                    🔒 Bloquear Todos (exceto Admins)
+                </button>
+            </form>
+            
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="allow_all">
+                <button type="submit" style="width: 100%; padding: 10px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    🔓 Liberar Todos
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

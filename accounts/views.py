@@ -67,13 +67,41 @@ def login_view(request):
                 'error': 'Email e senha são obrigatórios'
             }, status=status.HTTP_400_BAD_REQUEST)
         
+        # Verificar se usuário existe
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response({
+                'error': 'Email ou senha inválidos'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+        
+        # Verificar se conta está bloqueada
+        if user.is_locked():
+            return Response({
+                'error': 'Conta bloqueada. Tente novamente em 15 minutos.'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
         # Autenticar usuário
         user = authenticate(username=email, password=password)
         
         if not user:
+            # Incrementar tentativas falhadas
+            try:
+                user_temp = User.objects.get(email=email)
+                user_temp.increment_login_attempts()
+            except:
+                pass
             return Response({
                 'error': 'Email ou senha inválidos'
             }, status=status.HTTP_401_UNAUTHORIZED)
+        
+        # Resetar tentativas de login
+        user.reset_login_attempts()
+        
+        # Admin faz login direto, sem 2FA
+        if user.role == 'ADMIN':
+            tokens = get_tokens_for_user(user)
+            return Response(tokens)
         
         # Se 2FA está ativado
         if user.two_factor_enabled:
@@ -159,12 +187,22 @@ def register_view(request):
         username = request.data.get('username')
         email = request.data.get('email')
         password = request.data.get('password')
+        password2 = request.data.get('password2')
+        first_name = request.data.get('first_name', '')
+        last_name = request.data.get('last_name', '')
         curso = request.data.get('curso', '')
         classe = request.data.get('classe', '')
+        ano_ingresso = request.data.get('ano_ingresso', None)
         
         if not username or not email or not password:
             return Response({
                 'error': 'Username, email e senha são obrigatórios'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Validar senhas
+        if password != password2:
+            return Response({
+                'error': 'As senhas não coincidem'
             }, status=status.HTTP_400_BAD_REQUEST)
         
         # Verificar se email já existe
@@ -173,13 +211,23 @@ def register_view(request):
                 'error': 'Este email já está registrado'
             }, status=status.HTTP_400_BAD_REQUEST)
         
+        # Verificar se username já existe
+        if User.objects.filter(username=username).exists():
+            return Response({
+                'error': 'Este nome de usuário já está em uso'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
         # Criar usuário
         user = User.objects.create(
             username=username,
             email=email,
             role='ESTUDANTE',
+            first_name=first_name,
+            last_name=last_name,
             curso=curso,
-            classe=classe
+            classe=classe,
+            ano_ingresso=ano_ingresso,
+            two_factor_enabled=True  # 2FA sempre ativo para estudantes
         )
         user.set_password(password)
         user.save()
@@ -203,7 +251,7 @@ def user_me(request):
         'username': user.username,
         'email': user.email,
         'role': user.role,
-        'nome': user.get_full_name(),
+        'nome': user.get_full_name() or user.username,
         'curso': user.curso,
         'classe': user.classe,
         'ano_ingresso': user.ano_ingresso,
