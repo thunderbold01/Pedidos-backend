@@ -54,6 +54,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
 
+    # WhiteNoise (static files)
     'whitenoise.middleware.WhiteNoiseMiddleware',
 
     'corsheaders.middleware.CorsMiddleware',
@@ -98,13 +99,9 @@ ROOT_URLCONF = 'core.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-
-        # 🔥 IMPORTANTE PARA ADMIN
-        'DIRS': [BASE_DIR / "templates"],
-
+        'DIRS': [BASE_DIR / "templates"],  # importante
         'APP_DIRS': True,
         'OPTIONS': {
-            'debug': DEBUG,
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
@@ -118,26 +115,15 @@ TEMPLATES = [
 WSGI_APPLICATION = 'core.wsgi.application'
 
 # ========================
-# DATABASE (CORRETO)
+# DATABASE (RENDER FIX)
 # ========================
-DATABASE_URL = os.getenv("DATABASE_URL")
-
-if DATABASE_URL:
-    DATABASES = {
-        'default': dj_database_url.parse(
-            DATABASE_URL,
-            conn_max_age=600,
-            ssl_require=not DEBUG
-        )
-    }
-else:
-    # fallback local
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
+DATABASES = {
+    'default': dj_database_url.config(
+        default=os.getenv("DATABASE_URL", "sqlite:///db.sqlite3"),
+        conn_max_age=600,
+        ssl_require=not DEBUG
+    )
+}
 
 # ========================
 # AUTH USER
@@ -155,7 +141,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # ========================
-# INTERNACIONALIZAÇÃO
+# INTERNATIONALIZATION
 # ========================
 LANGUAGE_CODE = 'pt-pt'
 TIME_ZONE = 'Africa/Maputo'
@@ -174,7 +160,7 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # ========================
-# DJANGO REST FRAMEWORK
+# REST FRAMEWORK
 # ========================
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
