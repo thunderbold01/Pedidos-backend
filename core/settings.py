@@ -1,15 +1,25 @@
 from pathlib import Path
 from datetime import timedelta
 import os
+from dotenv import load_dotenv
+
+# ========================
+# LOAD ENV
+# ========================
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ========================
 # SEGURANÇA
 # ========================
-SECRET_KEY = 'django-insecure-change-this-key-in-production-12345'
-DEBUG = True
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '*']
+SECRET_KEY = os.getenv("SECRET_KEY", "unsafe-default")
+DEBUG = os.getenv("DEBUG", "True") == "True"
+
+ALLOWED_HOSTS = os.getenv(
+    "ALLOWED_HOSTS",
+    "127.0.0.1,localhost"
+).split(",")
 
 # ========================
 # APPS
@@ -25,8 +35,8 @@ INSTALLED_APPS = [
     # Third party
     'rest_framework',
     'rest_framework_simplejwt',
-    'corsheaders',
     'rest_framework.authtoken',
+    'corsheaders',
 
     # Local
     'accounts',
@@ -38,9 +48,11 @@ INSTALLED_APPS = [
 # ========================
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
+
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
+
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -48,13 +60,27 @@ MIDDLEWARE = [
 ]
 
 # ========================
-# CORS (Vite porta 5173)
+# CORS (Frontend Vercel + Local)
 # ========================
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
+
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://.*\.vercel\.app$",
+]
+
 CORS_ALLOW_CREDENTIALS = True
+
+# ========================
+# CSRF (produção)
+# ========================
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+    "https://*.vercel.app",
+    "https://*.onrender.com",
+]
 
 # ========================
 # URLS / TEMPLATES
@@ -80,22 +106,23 @@ TEMPLATES = [
 WSGI_APPLICATION = 'core.wsgi.application'
 
 # ========================
-# BASE DE DADOS
+# DATABASE (SQLite dev / Postgres prod)
 # ========================
+import dj_database_url
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default=os.getenv("DATABASE_URL")
+    )
 }
 
 # ========================
-# USER CUSTOMIZADO
+# USER CUSTOM
 # ========================
 AUTH_USER_MODEL = 'accounts.User'
 
 # ========================
-# PASSWORDS
+# PASSWORD VALIDATION
 # ========================
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -105,7 +132,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # ========================
-# INTERNACIONALIZAÇÃO
+# INTERNATIONALIZATION
 # ========================
 LANGUAGE_CODE = 'pt-pt'
 TIME_ZONE = 'Africa/Maputo'
@@ -113,13 +140,13 @@ USE_I18N = True
 USE_TZ = True
 
 # ========================
-# STATIC / MEDIA
+# STATIC / MEDIA (PROD READY)
 # ========================
-STATIC_URL = 'static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # ========================
 # DJANGO REST FRAMEWORK
@@ -129,12 +156,12 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.AllowAny',
     ),
 }
 
 # ========================
-# JWT
+# JWT CONFIG
 # ========================
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
@@ -145,17 +172,25 @@ SIMPLE_JWT = {
 }
 
 # ========================
-# EMAIL (Console no dev)
+# EMAIL (DEV + PROD)
 # ========================
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_BACKEND = os.getenv(
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.console.EmailBackend"
+)
 
-# Descomenta para usar Gmail em produção:
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'ADERITOHARE11@gmail.com'
-EMAIL_HOST_PASSWORD = 'lfnrdxrotysktrng'
+EMAIL_HOST = os.getenv("EMAIL_HOST", "")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
+
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+
+# ========================
+# SECURITY HEADERS (PROD)
+# ========================
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # ========================
 # DEFAULT AUTO FIELD

@@ -1,12 +1,33 @@
-asgiref==3.11.1
-Django==5.2.13
-django-cors-headers==4.9.0
-django-filter==25.2
-djangorestframework==3.17.1
-djangorestframework_simplejwt==5.5.1
-pillow==12.2.0
-PyJWT==2.12.1
-pyotp==2.9.0
-python-dotenv==1.2.2
-sqlparse==0.5.5
-tzdata==2026.2
+# ==================== DJANGO CORE ====================
+Django>=5.0,<6.0
+
+# ==================== DJANGO REST FRAMEWORK ====================
+djangorestframework>=3.14,<4.0
+djangorestframework-simplejwt>=5.3,<6.0
+
+# ==================== CORS ====================
+django-cors-headers>=4.3,<5.0
+
+# ==================== AUTH / SECURITY ====================
+pyotp>=2.9,<3.0
+djangorestframework-authtoken>=1.0
+
+# ==================== DATABASE ====================
+psycopg2-binary>=2.9,<3.0
+
+# ==================== MONITORING ====================
+psutil>=5.9,<6.0
+
+# ==================== FILES / MEDIA ====================
+Pillow>=10.0,<11.0
+
+# ==================== ENV CONFIG ====================
+python-decouple>=3.8,<4.0
+python-dotenv>=1.0,<2.0
+
+# ==================== DEPLOYMENT ====================
+gunicorn>=21.2,<22.0
+whitenoise>=6.5,<7.0
+
+# ==================== DEVELOPMENT ====================
+django-extensions>=3.2,<4.0
