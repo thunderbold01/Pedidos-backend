@@ -7,9 +7,17 @@ echo "  BUILD SISTEMA DE PEDIDOS"
 echo "========================================="
 
 echo ""
+echo "📦 Instalando pip mais recente..."
+pip install --upgrade pip
+
+echo ""
 echo "📦 Instalando dependencias..."
-pip install --upgrade pip --quiet
-pip install -r requirements.txt --quiet
+pip install -r requirements.txt
+
+echo ""
+echo "📋 Verificando gunicorn..."
+which gunicorn
+gunicorn --version
 
 echo ""
 echo "🗄️  Criando migracoes..."
@@ -32,5 +40,3 @@ echo "========================================="
 echo "  ✅ BUILD CONCLUIDO!"
 echo "========================================="
 EOF
-
-chmod +x build.sh
