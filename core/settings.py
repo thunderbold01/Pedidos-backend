@@ -23,7 +23,6 @@ ALLOWED_HOSTS = os.getenv(
     "127.0.0.1,localhost"
 ).split(",")
 
-# Render fix
 if not DEBUG:
     ALLOWED_HOSTS += [".onrender.com"]
 
@@ -44,18 +43,17 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'corsheaders',
 
-    # Local apps
+    # Local
     'accounts',
     'pedidos',
 ]
 
 # ========================
-# MIDDLEWARE (ORDEM CORRETA)
+# MIDDLEWARE
 # ========================
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
 
-    # WHITENOISE (OBRIGATÓRIO NO RENDER)
     'whitenoise.middleware.WhiteNoiseMiddleware',
 
     'corsheaders.middleware.CorsMiddleware',
@@ -93,19 +91,23 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 # ========================
-# URLS / TEMPLATES (FIX ADMIN ERROR E403)
+# URLS / TEMPLATES
 # ========================
 ROOT_URLCONF = 'core.urls'
 
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+
+        # 🔥 IMPORTANTE PARA ADMIN
+        'DIRS': [BASE_DIR / "templates"],
+
         'APP_DIRS': True,
         'OPTIONS': {
+            'debug': DEBUG,
             'context_processors': [
                 'django.template.context_processors.debug',
-                'django.template.context_processors.request',  # 🔥 ESSENCIAL PARA ADMIN
+                'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
@@ -116,10 +118,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'core.wsgi.application'
 
 # ========================
-# DATABASE
-# ========================
-# ========================
-# DATABASE (FIX DEFINITIVO)
+# DATABASE (CORRETO)
 # ========================
 DATABASE_URL = os.getenv("DATABASE_URL")
 
@@ -128,11 +127,11 @@ if DATABASE_URL:
         'default': dj_database_url.parse(
             DATABASE_URL,
             conn_max_age=600,
-            ssl_require=True
+            ssl_require=not DEBUG
         )
     }
 else:
-    # fallback local (evita crash)
+    # fallback local
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
@@ -156,7 +155,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # ========================
-# INTERNATIONALIZATION
+# INTERNACIONALIZAÇÃO
 # ========================
 LANGUAGE_CODE = 'pt-pt'
 TIME_ZONE = 'Africa/Maputo'
@@ -164,7 +163,7 @@ USE_I18N = True
 USE_TZ = True
 
 # ========================
-# STATIC / MEDIA (PRODUÇÃO CORRETA)
+# STATIC / MEDIA
 # ========================
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
@@ -175,7 +174,7 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # ========================
-# REST FRAMEWORK
+# DJANGO REST FRAMEWORK
 # ========================
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
