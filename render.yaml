@@ -1,24 +1,27 @@
+# render.yaml
 services:
   - type: web
-    name: sistema-pedidos-api
+    name: pedidos-backend
     env: python
-    buildCommand: chmod +x build.sh && ./build.sh
-    startCommand: gunicorn core.wsgi:application --bind 0.0.0.0:$PORT
+    region: frankfurt
+    buildCommand: ./build.sh
+    startCommand: gunicorn core.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120
     envVars:
       - key: SECRET_KEY
         generateValue: true
       - key: DEBUG
-        value: false
+        value: "False"
       - key: ALLOWED_HOSTS
-        value: .onrender.com
+        value: ".onrender.com,localhost,127.0.0.1"
       - key: DATABASE_URL
         fromDatabase:
-          name: sistema-pedidos-db
+          name: pedidos-db
           property: connectionString
-      - key: FRONTEND_URL
-        value: https://seu-frontend.onrender.com
+      - key: EMAIL_BACKEND
+        value: "django.core.mail.backends.console.EmailBackend"
 
 databases:
-  - name: sistema-pedidos-db
-    databaseName: sistema_pedidos
+  - name: pedidos-db
+    databaseName: secure_messaging_k977
+    user: admin
     plan: free
