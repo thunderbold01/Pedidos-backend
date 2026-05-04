@@ -2,23 +2,28 @@
 # build.sh
 set -o errexit
 
-echo "Instalando dependências..."
-pip install -r requirements.txt
+echo "========================================="
+echo "  BUILD SISTEMA DE PEDIDOS"
+echo "========================================="
 
-echo "Coletando arquivos estáticos..."
-python manage.py collectstatic --noinput
+echo ""
+echo "📦 Instalando dependências..."
+pip install --upgrade pip --quiet
+pip install -r requirements.txt --quiet
 
-echo "Executando migrações..."
+echo ""
+echo "🗄️  Executando migrações..."
 python manage.py migrate --noinput
 
-echo "Criando superusuário se não existir..."
-python manage.py shell -c "
-from accounts.models import User
-if not User.objects.filter(email='admin@escola.com').exists():
-    User.objects.create_superuser('admin@escola.com', 'Admin123')
-    print('Superusuário criado!')
-else:
-    print('Superusuário já existe.')
-"
+echo ""
+echo "📁 Coletando arquivos estáticos..."
+python manage.py collectstatic --noinput --clear
 
-echo "Build concluído!"
+echo ""
+echo "👤 Criando usuários padrão..."
+python manage.py create_default_users
+
+echo ""
+echo "========================================="
+echo "  ✅ BUILD CONCLUÍDO!"
+echo "========================================="
