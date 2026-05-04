@@ -1,13 +1,24 @@
+# core/urls.py
 from django.contrib import admin
 from django.urls import path, include
-from django.conf import settings
-from django.conf.urls.static import static
+from django.http import JsonResponse
+
+def home(request):
+    return JsonResponse({
+        "status": "ok",
+        "message": "API do Sistema de Pedidos",
+        "versao": "1.0",
+        "endpoints": {
+            "admin": "/admin/",
+            "api": "/api/",
+            "login": "/api/auth/login/",
+            "registro": "/api/auth/register/",
+        }
+    })
 
 urlpatterns = [
+    path('', home),
     path('admin/', admin.site.urls),
-    path('api/', include('accounts.urls')),  # URLs de autenticação
-    path('api/', include('pedidos.urls')),   # URLs de pedidos
+    path('api/', include('accounts.urls')),
+    path('api/', include('pedidos.urls')),
 ]
-
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
