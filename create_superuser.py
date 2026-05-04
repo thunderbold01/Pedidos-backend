@@ -1,8 +1,4 @@
-cat > create_superuser.py << 'EOF'
-"""
-Script para criar usuarios padrao
-Executado automaticamente pelo build.sh
-"""
+
 import os
 import sys
 import django
@@ -71,4 +67,4 @@ print("  ADMINISTR:   administracao@escola.com / Admin@123")
 print("  SEGURANCA:   seguranca@escola.com / Seguranca@123")
 print("  ESTUDANTE:   estudante@escola.com / Estudante@123")
 print("")
-EOF
+
