@@ -15,18 +15,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SEGURANÇA
 # ========================
 SECRET_KEY = os.getenv("SECRET_KEY", "unsafe-default")
-DEBUG = os.getenv("DEBUG", "True") == "True"
+
+DEBUG = os.getenv("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = os.getenv(
     "ALLOWED_HOSTS",
     "127.0.0.1,localhost"
 ).split(",")
 
-# 🔥 FIX IMPORTANTE PARA RENDER
+# Render fix
 if not DEBUG:
-    ALLOWED_HOSTS += [
-        ".onrender.com",
-    ]
+    ALLOWED_HOSTS += [".onrender.com"]
 
 # ========================
 # APPS
@@ -51,12 +50,16 @@ INSTALLED_APPS = [
 ]
 
 # ========================
-# MIDDLEWARE
+# MIDDLEWARE (ORDEM CORRETA)
 # ========================
 MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+
+    # WHITENOISE (IMPORTANTE PARA STATIC NO RENDER)
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+
     'corsheaders.middleware.CorsMiddleware',
 
-    'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
 
@@ -81,7 +84,7 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
 CORS_ALLOW_CREDENTIALS = True
 
 # ========================
-# CSRF
+# CSRF (IMPORTANTE PARA ADMIN + FRONTEND)
 # ========================
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
@@ -90,25 +93,9 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 # ========================
-# URLS / TEMPLATES
+# URLS
 # ========================
 ROOT_URLCONF = 'core.urls'
-
-TEMPLATES = [
-    {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
-            ],
-        },
-    },
-]
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
@@ -117,17 +104,18 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # ========================
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.getenv("DATABASE_URL")
+        default=os.getenv("DATABASE_URL"),
+        conn_max_age=600
     )
 }
 
 # ========================
-# AUTH USER
+# AUTH
 # ========================
 AUTH_USER_MODEL = 'accounts.User'
 
 # ========================
-# PASSWORD VALIDATION
+# PASSWORDS
 # ========================
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -145,10 +133,12 @@ USE_I18N = True
 USE_TZ = True
 
 # ========================
-# STATIC / MEDIA
+# STATIC / MEDIA (PRODUÇÃO CORRETA)
 # ========================
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
