@@ -1,4 +1,4 @@
-cat > build.sh << 'EOF'
+
 #!/usr/bin/env bash
 set -o errexit
 
@@ -36,4 +36,4 @@ echo ""
 echo "========================================="
 echo "  ✅ BUILD CONCLUIDO!"
 echo "========================================="
-EOF
+
