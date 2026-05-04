@@ -1,33 +1,22 @@
-# ==================== DJANGO CORE ====================
 Django>=5.0,<6.0
 
-# ==================== DJANGO REST FRAMEWORK ====================
 djangorestframework>=3.14,<4.0
 djangorestframework-simplejwt>=5.3,<6.0
 
-# ==================== CORS ====================
 django-cors-headers>=4.3,<5.0
 
-# ==================== AUTH / SECURITY ====================
 pyotp>=2.9,<3.0
-djangorestframework-authtoken>=1.0
 
-# ==================== DATABASE ====================
 psycopg2-binary>=2.9,<3.0
 
-# ==================== MONITORING ====================
-psutil>=5.9,<6.0
-
-# ==================== FILES / MEDIA ====================
 Pillow>=10.0,<11.0
 
-# ==================== ENV CONFIG ====================
-python-decouple>=3.8,<4.0
 python-dotenv>=1.0,<2.0
+dj-database-url>=2.0,<3.0
 
-# ==================== DEPLOYMENT ====================
 gunicorn>=21.2,<22.0
 whitenoise>=6.5,<7.0
 
-# ==================== DEVELOPMENT ====================
 django-extensions>=3.2,<4.0
+
+psutil>=5.9,<6.0
