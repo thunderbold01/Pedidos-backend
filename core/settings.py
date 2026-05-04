@@ -2,6 +2,7 @@ from pathlib import Path
 from datetime import timedelta
 import os
 from dotenv import load_dotenv
+import dj_database_url
 
 # ========================
 # LOAD ENV
@@ -20,6 +21,12 @@ ALLOWED_HOSTS = os.getenv(
     "ALLOWED_HOSTS",
     "127.0.0.1,localhost"
 ).split(",")
+
+# 🔥 FIX IMPORTANTE PARA RENDER
+if not DEBUG:
+    ALLOWED_HOSTS += [
+        ".onrender.com",
+    ]
 
 # ========================
 # APPS
@@ -60,7 +67,7 @@ MIDDLEWARE = [
 ]
 
 # ========================
-# CORS (Frontend Vercel + Local)
+# CORS
 # ========================
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
@@ -74,7 +81,7 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
 CORS_ALLOW_CREDENTIALS = True
 
 # ========================
-# CSRF (produção)
+# CSRF
 # ========================
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
@@ -106,10 +113,8 @@ TEMPLATES = [
 WSGI_APPLICATION = 'core.wsgi.application'
 
 # ========================
-# DATABASE (SQLite dev / Postgres prod)
+# DATABASE
 # ========================
-import dj_database_url
-
 DATABASES = {
     'default': dj_database_url.config(
         default=os.getenv("DATABASE_URL")
@@ -117,7 +122,7 @@ DATABASES = {
 }
 
 # ========================
-# USER CUSTOM
+# AUTH USER
 # ========================
 AUTH_USER_MODEL = 'accounts.User'
 
@@ -140,7 +145,7 @@ USE_I18N = True
 USE_TZ = True
 
 # ========================
-# STATIC / MEDIA (PROD READY)
+# STATIC / MEDIA
 # ========================
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
@@ -149,7 +154,7 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # ========================
-# DJANGO REST FRAMEWORK
+# REST FRAMEWORK
 # ========================
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -161,7 +166,7 @@ REST_FRAMEWORK = {
 }
 
 # ========================
-# JWT CONFIG
+# JWT
 # ========================
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
@@ -172,7 +177,7 @@ SIMPLE_JWT = {
 }
 
 # ========================
-# EMAIL (DEV + PROD)
+# EMAIL
 # ========================
 EMAIL_BACKEND = os.getenv(
     "EMAIL_BACKEND",
@@ -187,7 +192,7 @@ EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 
 # ========================
-# SECURITY HEADERS (PROD)
+# SECURITY HEADERS
 # ========================
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
