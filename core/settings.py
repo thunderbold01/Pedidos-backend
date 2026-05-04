@@ -158,7 +158,7 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'aderitohare11@gmail.com'
-EMAIL_HOST_PASSWORD = 'ptzu ijfx ehnr mcrf'
+EMAIL_HOST_PASSWORD = 'bolfcuhnjetaxwrx'
 DEFAULT_FROM_EMAIL = 'aderitohare11@gmail.com'
 
 # ========================
