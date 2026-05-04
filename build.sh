@@ -1,5 +1,5 @@
+cat > build.sh << 'EOF'
 #!/usr/bin/env bash
-# build.sh
 set -o errexit
 
 echo "========================================="
@@ -7,23 +7,30 @@ echo "  BUILD SISTEMA DE PEDIDOS"
 echo "========================================="
 
 echo ""
-echo "📦 Instalando dependências..."
+echo "📦 Instalando dependencias..."
 pip install --upgrade pip --quiet
 pip install -r requirements.txt --quiet
 
 echo ""
-echo "🗄️  Executando migrações..."
+echo "🗄️  Criando migracoes..."
+python manage.py makemigrations accounts pedidos --noinput
+
+echo ""
+echo "🗄️  Executando migracoes..."
 python manage.py migrate --noinput
 
 echo ""
-echo "📁 Coletando arquivos estáticos..."
+echo "📁 Coletando arquivos estaticos..."
 python manage.py collectstatic --noinput --clear
 
 echo ""
-echo "👤 Criando usuários padrão..."
-python manage.py create_default_users
+echo "👤 Criando super usuario..."
+python create_superuser.py
 
 echo ""
 echo "========================================="
-echo "  ✅ BUILD CONCLUÍDO!"
+echo "  ✅ BUILD CONCLUIDO!"
 echo "========================================="
+EOF
+
+chmod +x build.sh
