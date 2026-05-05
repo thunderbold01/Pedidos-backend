@@ -19,4 +19,7 @@ urlpatterns = [
     path('notificacoes/', views.notificacoes, name='notificacoes'),
     path('notificacoes/<int:notificacao_id>/ler/', views.marcar_notificacao_lida, name='marcar_notificacao_lida'),
     path('notificacoes/ler-todas/', views.marcar_todas_lidas, name='marcar_todas_lidas'),
+    path('pedidos/coletiva/criar/', views.criar_saida_coletiva, name='criar_coletiva'),
+    path('coletivas/', views.listar_coletivas_estudante, name='listar_coletivas'),
+    path('coletivas/<int:convite_id>/responder/', views.responder_coletiva, name='responder_coletiva'),
 ]
