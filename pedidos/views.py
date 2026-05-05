@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.db.models import Q, Count
 from datetime import datetime, timedelta
 
-from .models import Pedido, HistoricoPedido, EstadoPedido, Notificacao, TipoPedido
+from .models import Pedido, HistoricoPedido, EstadoPedido, Notificacao, TipoPedido, SaidaColetiva, ConviteColetiva
 from accounts.models import User
 
 # ==================== FUNÇÕES AUXILIARES ====================
@@ -87,21 +87,33 @@ def dashboard(request):
             pedidos_aprovados = Pedido.objects.filter(estudante=user, estado=EstadoPedido.APROVADO).count()
             pedidos_rejeitados = Pedido.objects.filter(estudante=user, estado=EstadoPedido.REJEITADO).count()
             
+            # Saídas coletivas pendentes
+            coletivas_pendentes = ConviteColetiva.objects.filter(
+                estudante=user, 
+                estado='PENDENTE'
+            ).count()
+            
             return Response({
                 'total_pedidos': total_pedidos,
                 'pedidos_pendentes': pedidos_pendentes,
                 'pedidos_aprovados': pedidos_aprovados,
                 'pedidos_rejeitados': pedidos_rejeitados,
+                'coletivas_pendentes': coletivas_pendentes,
             })
         
         elif user.role == 'DITE':
             meus_pedidos = Pedido.objects.filter(estado=EstadoPedido.PENDENTE_DITE)
+            coletivas_ativas = SaidaColetiva.objects.filter(
+                prazo_resposta__gt=timezone.now()
+            ).count()
+            
             return Response({
                 'total_pedidos': Pedido.objects.count(),
                 'pedidos_pendentes': Pedido.objects.filter(estado__in=[EstadoPedido.PENDENTE_DITE, EstadoPedido.PENDENTE_DIRECAO, EstadoPedido.PENDENTE_ADMIN]).count(),
                 'pedidos_aprovados': Pedido.objects.filter(estado=EstadoPedido.APROVADO).count(),
                 'pedidos_rejeitados': Pedido.objects.filter(estado=EstadoPedido.REJEITADO).count(),
                 'meus_pedidos_pendentes': meus_pedidos.count(),
+                'coletivas_ativas': coletivas_ativas,
             })
         
         elif user.role == 'DIRECAO':
@@ -125,12 +137,17 @@ def dashboard(request):
             })
         
         else:  # ADMIN e outros
+            coletivas_ativas = SaidaColetiva.objects.filter(
+                prazo_resposta__gt=timezone.now()
+            ).count()
+            
             return Response({
                 'total_pedidos': Pedido.objects.count(),
                 'pedidos_pendentes': Pedido.objects.filter(estado__in=[EstadoPedido.PENDENTE_DITE, EstadoPedido.PENDENTE_DIRECAO, EstadoPedido.PENDENTE_ADMIN]).count(),
                 'pedidos_aprovados': Pedido.objects.filter(estado=EstadoPedido.APROVADO).count(),
                 'pedidos_rejeitados': Pedido.objects.filter(estado=EstadoPedido.REJEITADO).count(),
                 'meus_pedidos_pendentes': Pedido.objects.filter(estado__in=[EstadoPedido.PENDENTE_DITE, EstadoPedido.PENDENTE_DIRECAO, EstadoPedido.PENDENTE_ADMIN]).count(),
+                'coletivas_ativas': coletivas_ativas,
             })
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -844,3 +861,155 @@ def marcar_todas_lidas(request):
         return Response({'message': 'Todas marcadas como lidas'})
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# ==================== SAÍDA COLETIVA ====================
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def criar_saida_coletiva(request):
+    """DITE/Direção/Administração cria saída coletiva"""
+    user = request.user
+    
+    if user.role not in ['DITE', 'DIRECAO', 'ADMINISTRACAO', 'ADMIN']:
+        return Response({'error': 'Sem permissão'}, status=403)
+    
+    try:
+        titulo = request.data.get('titulo')
+        descricao = request.data.get('descricao')
+        data_saida = request.data.get('data_saida')
+        data_volta = request.data.get('data_volta')
+        prazo_horas = int(request.data.get('prazo_horas', 24))
+        
+        if not all([titulo, data_saida, data_volta]):
+            return Response({'error': 'Título, data saída e volta são obrigatórios'}, status=400)
+        
+        data_saida_dt = datetime.strptime(data_saida, '%Y-%m-%dT%H:%M')
+        data_volta_dt = datetime.strptime(data_volta, '%Y-%m-%dT%H:%M')
+        prazo = timezone.now() + timedelta(hours=prazo_horas)
+        
+        coletiva = SaidaColetiva.objects.create(
+            criador=user,
+            titulo=titulo,
+            descricao=descricao,
+            data_saida=data_saida_dt,
+            data_volta=data_volta_dt,
+            prazo_resposta=prazo,
+        )
+        
+        # Convidar TODOS os estudantes ativos
+        estudantes = User.objects.filter(role='ESTUDANTE', is_active=True)
+        for est in estudantes:
+            ConviteColetiva.objects.create(
+                saida_coletiva=coletiva,
+                estudante=est,
+            )
+            criar_notificacao(est, None, 'COLETIVA_NOVA',
+                f'Nova saída coletiva: {titulo}. Responda até {prazo.strftime("%d/%m %H:%M")}')
+        
+        return Response({
+            'message': 'Saída coletiva criada',
+            'id': coletiva.id,
+            'convidados': estudantes.count()
+        }, status=201)
+        
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def listar_coletivas_estudante(request):
+    """Estudante vê suas saídas coletivas pendentes"""
+    user = request.user
+    
+    if user.role != 'ESTUDANTE':
+        return Response({'error': 'Apenas estudantes'}, status=403)
+    
+    try:
+        convites = ConviteColetiva.objects.filter(estudante=user).select_related('saida_coletiva').order_by('-created_at')
+        
+        # Verificar expiração
+        for c in convites:
+            c.verificar_expiracao()
+        
+        dados = []
+        for c in convites:
+            dados.append({
+                'id': c.id,
+                'coletiva_id': c.saida_coletiva.id,
+                'titulo': c.saida_coletiva.titulo,
+                'descricao': c.saida_coletiva.descricao,
+                'data_saida': c.saida_coletiva.data_saida.strftime('%d/%m/%Y %H:%M'),
+                'data_volta': c.saida_coletiva.data_volta.strftime('%d/%m/%Y %H:%M'),
+                'prazo': c.saida_coletiva.prazo_resposta.strftime('%d/%m/%Y %H:%M'),
+                'estado': c.estado,
+                'criador': c.saida_coletiva.criador.get_full_name(),
+            })
+        
+        return Response({'coletivas': dados, 'total': len(dados)})
+        
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def responder_coletiva(request, convite_id):
+    """Estudante aceita ou recusa saída coletiva"""
+    user = request.user
+    
+    if user.role != 'ESTUDANTE':
+        return Response({'error': 'Apenas estudantes'}, status=403)
+    
+    try:
+        convite = get_object_or_404(ConviteColetiva, id=convite_id, estudante=user)
+        
+        if convite.estado != 'PENDENTE':
+            return Response({'error': 'Convite já respondido ou expirado'}, status=400)
+        
+        # Verificar expiração
+        if convite.verificar_expiracao():
+            return Response({'error': 'Prazo expirado. Automaticamente recusado.'}, status=400)
+        
+        resposta = request.data.get('resposta')  # 'ACEITE' ou 'RECUSADO'
+        if resposta not in ['ACEITE', 'RECUSADO']:
+            return Response({'error': 'Resposta inválida'}, status=400)
+        
+        convite.estado = resposta
+        convite.data_resposta = timezone.now()
+        convite.save()
+        
+        # Se aceitou, criar pedido automaticamente
+        if resposta == 'ACEITE':
+            pedido = Pedido.objects.create(
+                estudante=user,
+                tipo='escola',
+                motivo=f'Saída Coletiva: {convite.saida_coletiva.titulo}',
+                data_saida=convite.saida_coletiva.data_saida,
+                data_volta=convite.saida_coletiva.data_volta,
+                estado=EstadoPedido.APROVADO,
+                responsavel_atual='FINALIZADO',
+                data_saida_confirmada=convite.saida_coletiva.data_saida,
+                data_volta_confirmada=convite.saida_coletiva.data_volta,
+            )
+            HistoricoPedido.objects.create(
+                pedido=pedido,
+                acao='CRIADO',
+                para_estado=EstadoPedido.APROVADO,
+                usuario=user,
+                role_usuario=user.role,
+                comentario='Aprovado automaticamente - Saída Coletiva'
+            )
+        
+        # Notificar criador
+        criar_notificacao(
+            convite.saida_coletiva.criador,
+            None,
+            'COLETIVA_RESPOSTA',
+            f'{user.get_full_name()} {dict(ConviteColetiva.ESTADO_CHOICES).get(resposta)} a saída: {convite.saida_coletiva.titulo}'
+        )
+        
+        return Response({'message': f'Convite {dict(ConviteColetiva.ESTADO_CHOICES).get(resposta).lower()} com sucesso'})
+        
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
