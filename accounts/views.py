@@ -1,7 +1,6 @@
 # accounts/views.py
 
 from django.shortcuts import render
-from django.contrib.auth import authenticate
 from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -13,7 +12,6 @@ from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
 import random
-import json
 
 from .models import User
 
@@ -22,23 +20,6 @@ from .models import User
 def gerar_codigo_2fa():
     """Gera código 2FA de 6 dígitos"""
     return str(random.randint(100000, 999999))
-
-def enviar_email_2fa(email, codigo):
-    """Envia email com código 2FA"""
-    try:
-        send_mail(
-            subject='🔐 Código de Verificação - Sistema de Pedidos',
-            message=f'Seu código de acesso é: {codigo}\n\nVálido por 10 minutos.\n\nNão compartilhe este código com ninguém.',
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-            fail_silently=False,
-        )
-        print(f"✅ Email 2FA enviado para {email}")
-        return True
-    except Exception as e:
-        print(f"❌ Erro ao enviar email: {e}")
-        print(f"📧 CÓDIGO 2FA ({email}): {codigo}")
-        return True
 
 def get_tokens_for_user(user):
     """Gera tokens JWT para o usuário"""
@@ -66,70 +47,54 @@ def login_view(request):
         password = request.data.get('password')
         
         if not email or not password:
-            return Response({
-                'error': 'Email e senha são obrigatórios'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Email e senha são obrigatórios'}, status=400)
         
-        # Buscar usuário pelo email
+        # Buscar usuário
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
-            return Response({
-                'error': 'Email ou senha inválidos'
-            }, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'error': 'Email ou senha inválidos'}, status=401)
         
         # Verificar conta bloqueada
         if user.is_locked():
-            return Response({
-                'error': 'Conta bloqueada. Tente novamente em 15 minutos.'
-            }, status=status.HTTP_403_FORBIDDEN)
+            return Response({'error': 'Conta bloqueada. Tente em 15 minutos.'}, status=403)
         
-        # Verificar se pode fazer login
+        # Verificar login permitido
         if not user.can_login:
-            return Response({
-                'error': 'Login não permitido para esta conta.'
-            }, status=status.HTTP_403_FORBIDDEN)
+            return Response({'error': 'Login não permitido.'}, status=403)
         
-        # Verificar senha MANUALMENTE (em vez de usar authenticate)
+        # Verificar senha
         if not user.check_password(password):
             user.increment_login_attempts()
-            return Response({
-                'error': 'Email ou senha inválidos'
-            }, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'error': 'Email ou senha inválidos'}, status=401)
         
-        # Resetar tentativas de login
+        # Resetar tentativas
         user.reset_login_attempts()
         
-        # Admin faz login direto, sem 2FA
+        # Admin - login direto
         if user.role == 'ADMIN':
-            tokens = get_tokens_for_user(user)
-            return Response(tokens)
+            return Response(get_tokens_for_user(user))
         
-        # Se 2FA está ativado
+        # 2FA ativado - gerar código
         if user.two_factor_enabled:
             codigo = gerar_codigo_2fa()
             user.two_factor_code = codigo
             user.two_factor_expires = timezone.now() + timedelta(minutes=10)
             user.save()
             
-            # Enviar email com código
-            enviar_email_2fa(user.email, codigo)
-            
+            # Retornar código na resposta
             return Response({
                 'require_2fa': True,
                 'email': user.email,
-                'message': 'Código 2FA enviado para seu email'
+                'message': f'Código: {codigo}',
+                'code': codigo
             })
         
-        # Login normal (sem 2FA)
-        tokens = get_tokens_for_user(user)
-        return Response(tokens)
+        # Login sem 2FA
+        return Response(get_tokens_for_user(user))
         
     except Exception as e:
-        print(f"❌ Erro no login: {e}")
-        return Response({
-            'error': 'Erro interno do servidor'
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({'error': 'Erro interno'}, status=500)
 
 
 @api_view(['POST'])
@@ -141,58 +106,40 @@ def verify_2fa_view(request):
         codigo = request.data.get('code')
         
         if not email or not codigo:
-            return Response({
-                'error': 'Email e código são obrigatórios'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Email e código obrigatórios'}, status=400)
         
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
-            return Response({
-                'error': 'Usuário não encontrado'
-            }, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Usuário não encontrado'}, status=404)
         
-        # Verificar se existe código 2FA pendente
         if not user.two_factor_code:
-            return Response({
-                'error': 'Nenhum código 2FA solicitado. Faça login novamente.'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Nenhum código solicitado. Faça login novamente.'}, status=400)
         
-        # Verificar expiração
-        if user.two_factor_expires:
-            if timezone.now() > user.two_factor_expires:
-                user.two_factor_code = None
-                user.two_factor_expires = None
-                user.save()
-                return Response({
-                    'error': 'Código 2FA expirado. Faça login novamente.'
-                }, status=status.HTTP_400_BAD_REQUEST)
+        if user.two_factor_expires and timezone.now() > user.two_factor_expires:
+            user.two_factor_code = None
+            user.two_factor_expires = None
+            user.save()
+            return Response({'error': 'Código expirado. Faça login novamente.'}, status=400)
         
-        # Verificar código
         if user.two_factor_code != codigo:
-            return Response({
-                'error': 'Código 2FA inválido'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Código inválido'}, status=400)
         
-        # Código correto - limpar e gerar tokens
+        # Código correto
         user.two_factor_code = None
         user.two_factor_expires = None
         user.save()
         
-        tokens = get_tokens_for_user(user)
-        return Response(tokens)
+        return Response(get_tokens_for_user(user))
         
     except Exception as e:
-        print(f"❌ Erro na verificação 2FA: {e}")
-        return Response({
-            'error': 'Erro interno do servidor'
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({'error': 'Erro interno'}, status=500)
 
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register_view(request):
-    """Registrar novo usuário (apenas estudantes)"""
+    """Registrar novo estudante"""
     try:
         username = request.data.get('username')
         email = request.data.get('email')
@@ -204,33 +151,21 @@ def register_view(request):
         classe = request.data.get('classe', '')
         ano_ingresso = request.data.get('ano_ingresso', None)
         
-        # Validações
         if not username or not email or not password:
-            return Response({
-                'error': 'Username, email e senha são obrigatórios'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Username, email e senha obrigatórios'}, status=400)
         
         if password != password2:
-            return Response({
-                'error': 'As senhas não coincidem'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Senhas não coincidem'}, status=400)
         
         if len(password) < 8:
-            return Response({
-                'error': 'A senha deve ter pelo menos 8 caracteres'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Senha deve ter 8+ caracteres'}, status=400)
         
         if User.objects.filter(email=email).exists():
-            return Response({
-                'error': 'Este email já está registrado'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Email já registrado'}, status=400)
         
         if User.objects.filter(username=username).exists():
-            return Response({
-                'error': 'Este nome de usuário já está em uso'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Username já em uso'}, status=400)
         
-        # Criar usuário
         user = User.objects.create(
             username=username,
             email=email,
@@ -247,14 +182,10 @@ def register_view(request):
         user.set_password(password)
         user.save()
         
-        tokens = get_tokens_for_user(user)
-        return Response(tokens, status=status.HTTP_201_CREATED)
+        return Response(get_tokens_for_user(user), status=201)
         
     except Exception as e:
-        print(f"❌ Erro no registro: {e}")
-        return Response({
-            'error': 'Erro interno do servidor'
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({'error': 'Erro interno'}, status=500)
 
 
 @api_view(['GET'])
@@ -278,12 +209,12 @@ def user_me(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout_view(request):
-    """Logout do usuário"""
+    """Logout"""
     try:
         refresh_token = request.data.get('refresh')
         if refresh_token:
             token = RefreshToken(refresh_token)
             token.blacklist()
-        return Response({'message': 'Logout realizado com sucesso'})
-    except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'message': 'Logout realizado'})
+    except:
+        return Response({'message': 'Logout realizado'})
