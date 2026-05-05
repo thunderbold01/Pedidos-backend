@@ -38,7 +38,7 @@ def enviar_email_2fa(email, codigo):
     except Exception as e:
         print(f"❌ Erro ao enviar email: {e}")
         print(f"📧 CÓDIGO 2FA ({email}): {codigo}")
-        return True  # Retorna True mesmo com erro para não quebrar o fluxo
+        return True
 
 def get_tokens_for_user(user):
     """Gera tokens JWT para o usuário"""
@@ -70,7 +70,7 @@ def login_view(request):
                 'error': 'Email e senha são obrigatórios'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        # Buscar usuário
+        # Buscar usuário pelo email
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
@@ -90,20 +90,14 @@ def login_view(request):
                 'error': 'Login não permitido para esta conta.'
             }, status=status.HTTP_403_FORBIDDEN)
         
-        # Autenticar
-        user = authenticate(username=email, password=password)
-        
-        if not user:
-            try:
-                user_temp = User.objects.get(email=email)
-                user_temp.increment_login_attempts()
-            except:
-                pass
+        # Verificar senha MANUALMENTE (em vez de usar authenticate)
+        if not user.check_password(password):
+            user.increment_login_attempts()
             return Response({
                 'error': 'Email ou senha inválidos'
             }, status=status.HTTP_401_UNAUTHORIZED)
         
-        # Resetar tentativas
+        # Resetar tentativas de login
         user.reset_login_attempts()
         
         # Admin faz login direto, sem 2FA
@@ -161,17 +155,18 @@ def verify_2fa_view(request):
         # Verificar se existe código 2FA pendente
         if not user.two_factor_code:
             return Response({
-                'error': 'Nenhum código 2FA solicitado'
+                'error': 'Nenhum código 2FA solicitado. Faça login novamente.'
             }, status=status.HTTP_400_BAD_REQUEST)
         
         # Verificar expiração
-        if timezone.now() > user.two_factor_expires:
-            user.two_factor_code = None
-            user.two_factor_expires = None
-            user.save()
-            return Response({
-                'error': 'Código 2FA expirado. Faça login novamente.'
-            }, status=status.HTTP_400_BAD_REQUEST)
+        if user.two_factor_expires:
+            if timezone.now() > user.two_factor_expires:
+                user.two_factor_code = None
+                user.two_factor_expires = None
+                user.save()
+                return Response({
+                    'error': 'Código 2FA expirado. Faça login novamente.'
+                }, status=status.HTTP_400_BAD_REQUEST)
         
         # Verificar código
         if user.two_factor_code != codigo:
