@@ -151,14 +151,14 @@ SIMPLE_JWT = {
 }
 
 # ========================
-# EMAIL - GMAIL CONFIGURADO
+# EMAIL - BREVO
 # ========================
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_HOST = 'smtp-relay.brevo.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'aderitohare11@gmail.com'
-EMAIL_HOST_PASSWORD = 'hinubjurgzdvkrxq'
+EMAIL_HOST_USER = 'aa422d001@smtp-brevo.com'
+EMAIL_HOST_PASSWORD = 'bskyisdRmOjKhcw'
 DEFAULT_FROM_EMAIL = 'aderitohare11@gmail.com'
 
 # ========================
