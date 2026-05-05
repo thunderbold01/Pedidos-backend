@@ -1,4 +1,3 @@
-
 #!/usr/bin/env bash
 set -o errexit
 
@@ -12,13 +11,10 @@ python -m pip install --upgrade pip --quiet
 python -m pip install -r requirements.txt --quiet
 
 echo ""
-echo "🗄️  Resetando banco de dados..."
-python reset_db.py
-
-echo ""
-echo "🗄️  Criando migracoes..."
-python manage.py makemigrations accounts --noinput
-python manage.py makemigrations pedidos --noinput
+echo "🗄️  Verificando migracoes..."
+# NÃO apaga nada, só cria se não existir
+python manage.py makemigrations accounts --noinput 2>/dev/null || true
+python manage.py makemigrations pedidos --noinput 2>/dev/null || true
 
 echo ""
 echo "🗄️  Aplicando migracoes..."
@@ -29,11 +25,10 @@ echo "📁 Coletando estaticos..."
 python manage.py collectstatic --noinput --clear
 
 echo ""
-echo "👤 Criando usuarios..."
+echo "👤 Verificando usuarios..."
 python create_superuser.py
 
 echo ""
 echo "========================================="
 echo "  ✅ BUILD CONCLUIDO!"
 echo "========================================="
-
